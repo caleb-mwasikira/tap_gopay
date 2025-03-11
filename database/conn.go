@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/caleb-mwasikira/banking/utils"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
 	"github.com/go-sql-driver/mysql"
 )
 

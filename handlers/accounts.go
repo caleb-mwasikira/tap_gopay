@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"strings"
 
-	db "github.com/caleb-mwasikira/banking/database"
-	"github.com/caleb-mwasikira/banking/handlers/api"
-	"github.com/caleb-mwasikira/banking/validators"
+	db "github.com/caleb-mwasikira/tap_gopay/database"
+	"github.com/caleb-mwasikira/tap_gopay/handlers/api"
+	"github.com/caleb-mwasikira/tap_gopay/validators"
 )
 
 func GetAllBankAccounts(w http.ResponseWriter, r *http.Request) {
@@ -246,7 +246,7 @@ func DeleteBankAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := api.Response[any]{
-		Message: fmt.Sprintf("Bank account %v deleted successfully", err),
+		Message: fmt.Sprintf("Bank account %v deleted successfully", accountNo),
 		Data:    nil,
 	}
 	api.SendJSONResponse(w, resp)

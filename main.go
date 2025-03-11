@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	h "github.com/caleb-mwasikira/banking/handlers"
-	"github.com/caleb-mwasikira/banking/utils"
+	h "github.com/caleb-mwasikira/tap_gopay/handlers"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
 )
 
 // responseWriter is a wrapper to capture the response status
@@ -53,7 +53,7 @@ func main() {
 	mux.Handle("POST /accounts", h.AuthMiddleware(
 		http.HandlerFunc(h.CreateBankAccount),
 	))
-	mux.Handle("GET /accounts{acc_no}", h.AuthMiddleware(
+	mux.Handle("DELETE /accounts/{acc_no}", h.AuthMiddleware(
 		http.HandlerFunc(h.DeleteBankAccount),
 	))
 

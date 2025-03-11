@@ -1,10 +1,9 @@
 package database
 
 import (
-	"fmt"
 	"log"
 
-	"github.com/caleb-mwasikira/banking/validators"
+	"github.com/caleb-mwasikira/tap_gopay/validators"
 )
 
 type Account struct {
@@ -167,21 +166,12 @@ func GetAccountByUserId(id int) (*AccountDetails, error) {
 }
 
 func DeleteAccount(accountNo string) error {
-	query := "UPDATE accounts SET is_active=false WHERE account_no=?"
+	query := "UPDATE accounts SET is_active = FALSE WHERE account_no = ?"
 
-	result, err := db.Exec(query, accountNo)
+	_, err := db.Exec(query, accountNo)
 	if err != nil {
 		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("account with account_no=%v NOT found", acccountNo)
-	}
-
-	return nil
+	return err
 }

@@ -17,8 +17,7 @@ type LoginForm struct {
 }
 
 type RegisterForm struct {
-	FirstName   string `json:"firstname" validate:"required,min=3,max=255"`
-	LastName    string `json:"lastname" validate:"required,min=3,max=255"`
+	Username    string `json:"username" validate:"min=3,max=50"`
 	Email       string `json:"email" validate:"email"`
 	Password    string `json:"password" validate:"password"`
 	PhoneNumber string `json:"phone_no,omitempty"`
