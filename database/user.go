@@ -3,19 +3,16 @@ package database
 import (
 	"database/sql"
 
-	"github.com/caleb-mwasikira/banking/validators"
+	v "github.com/caleb-mwasikira/tap_gopay/validators"
 )
 
 type User struct {
-	Id             int            `json:"id"`
-	FirstName      string         `json:"firstname"`
-	LastName       string         `json:"lastname"`
-	Email          string         `json:"email"`
-	Password       string         `json:"password"`
-	Role           string         `json:"role"`
-	PhoneNumber    sql.NullString `json:"phone_no"`
-	ProfilePicture sql.NullString `json:"profile_pic"`
-	IsActive       bool           `json:"is_active"`
+	Id          int            `json:"id"`
+	Username    string         `json:"username"`
+	Email       string         `json:"email"`
+	Password    string         `json:"password"`
+	IsActive    bool           `json:"is_active"`
+	PhoneNumber sql.NullString `json:"phone_no"`
 }
 
 func GetUser(email string) (*User, error) {
@@ -24,14 +21,11 @@ func GetUser(email string) (*User, error) {
 	dbUser := User{}
 	err := row.Scan(
 		&dbUser.Id,
-		&dbUser.FirstName,
-		&dbUser.LastName,
+		&dbUser.Username,
 		&dbUser.Email,
 		&dbUser.Password,
-		&dbUser.Role,
-		&dbUser.PhoneNumber,
-		&dbUser.ProfilePicture,
 		&dbUser.IsActive,
+		&dbUser.PhoneNumber,
 	)
 	if err != nil {
 		return nil, err
@@ -40,13 +34,13 @@ func GetUser(email string) (*User, error) {
 	return &dbUser, nil
 }
 
-func CreateUser(user validators.RegisterForm) error {
+func CreateUser(user v.RegisterDto) error {
 	_, err := db.Exec(
-		"INSERT INTO users(firstname, lastname, email, password) VALUES(?, ?, ?, ?)",
-		user.FirstName,
-		user.LastName,
+		"INSERT INTO users(username, email, password, phone_no) VALUES(?, ?, ?, ?)",
+		user.Username,
 		user.Email,
 		user.Password,
+		user.PhoneNumber,
 	)
 
 	return err

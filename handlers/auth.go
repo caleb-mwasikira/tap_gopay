@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
-	db "github.com/caleb-mwasikira/banking/database"
-	"github.com/caleb-mwasikira/banking/handlers/api"
-	"github.com/caleb-mwasikira/banking/utils"
-	"github.com/caleb-mwasikira/banking/validators"
+	db "github.com/caleb-mwasikira/tap_gopay/database"
+	"github.com/caleb-mwasikira/tap_gopay/handlers/api"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
+	"github.com/caleb-mwasikira/tap_gopay/validators"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -38,12 +38,12 @@ func init() {
 func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	user := validators.RegisterForm{}
+	user := validators.RegisterDto{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		api.Error(
 			w,
-			"Invalid JSON data provided as input",
+			ErrInvalidJsonInput,
 			err,
 			http.StatusBadRequest,
 		)
@@ -53,14 +53,12 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	// validate register credentials
 	errs := validators.ValidateStruct(user)
 	if len(errs) != 0 {
-		w.WriteHeader(http.StatusBadRequest)
-
-		resp := api.Response[map[string]string]{
-			Message: "Validation errors",
-			Data:    errs,
-		}
-
-		api.SendJSONResponse(w, resp)
+		api.SendResponse(
+			w,
+			"Validation errors",
+			nil, errs,
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -101,24 +99,23 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-
-	resp := api.Response[validators.RegisterForm]{
-		Message: "Registration successful",
-		Data:    user,
-	}
-	api.SendJSONResponse(w, resp)
+	api.SendResponse(
+		w,
+		"Registration successful",
+		user, nil,
+		http.StatusCreated,
+	)
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	user := validators.LoginForm{}
+	user := validators.LoginDto{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		api.Error(
 			w,
-			"Invalid JSON data provided as input",
+			ErrInvalidJsonInput,
 			err,
 			http.StatusBadRequest,
 		)
@@ -127,13 +124,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	errs := validators.ValidateStruct(user)
 	if len(errs) != 0 {
-		w.WriteHeader(http.StatusBadRequest)
-
-		resp := api.Response[map[string]string]{
-			Message: "Validation errors",
-			Data:    errs,
-		}
-		api.SendJSONResponse(w, resp)
+		api.SendResponse(
+			w,
+			"Validation errors",
+			nil, errs,
+			http.StatusBadRequest,
+		)
 		return
 	}
 
@@ -141,11 +137,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	dbUser, err := db.GetUser(user.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			resp := api.Response[any]{
-				Message: "User account does not exist",
-				Data:    nil,
-			}
-			api.SendJSONResponse(w, resp)
+			api.SendResponse(
+				w,
+				"User account does not exist",
+				nil, nil,
+				http.StatusUnauthorized,
+			)
 			return
 		}
 
@@ -164,7 +161,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 			w,
 			"Invalid username or password",
 			err,
-			http.StatusForbidden,
+			http.StatusUnauthorized,
 		)
 		return
 	}
@@ -180,13 +177,12 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-
-	resp := api.Response[string]{
-		Message: "Login successful",
-		Data:    signedToken,
-	}
-	api.SendJSONResponse(w, resp)
+	api.SendResponse(
+		w,
+		"Login successful",
+		signedToken, nil,
+		http.StatusOK,
+	)
 }
 
 func AuthMiddleware(next http.Handler) http.Handler {
@@ -254,7 +250,7 @@ func createToken(user db.User) (string, error) {
 	aud := base64.RawStdEncoding.EncodeToString(data)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.Email,                            // Subject (user identifier)
-		"iss": "banking-app",                         // Issuer
+		"iss": "tap_gopay",                           // Issuer
 		"aud": aud,                                   // Audience (user data)
 		"exp": time.Now().Add(24 * time.Hour).Unix(), // Expiration time
 		"iat": time.Now().Unix(),                     // Issued at

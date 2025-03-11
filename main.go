@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	h "github.com/caleb-mwasikira/banking/handlers"
-	"github.com/caleb-mwasikira/banking/utils"
+	h "github.com/caleb-mwasikira/tap_gopay/handlers"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
 )
 
 // responseWriter is a wrapper to capture the response status
@@ -44,17 +44,18 @@ func main() {
 
 	mux.HandleFunc("POST /signup", h.HandleSignUp)
 	mux.HandleFunc("POST /login", h.HandleLogin)
-	mux.Handle("GET /accounts", h.AuthMiddleware(
-		http.HandlerFunc(h.GetAllBankAccounts),
+
+	mux.Handle("POST /new-account", h.AuthMiddleware(
+		http.HandlerFunc(h.NewAccount),
 	))
-	mux.Handle("GET /accounts/{acc_no}", h.AuthMiddleware(
-		http.HandlerFunc(h.GetBankAccount),
+	mux.Handle("GET /my-accounts", h.AuthMiddleware(
+		http.HandlerFunc(h.MyAccounts),
 	))
-	mux.Handle("POST /accounts", h.AuthMiddleware(
-		http.HandlerFunc(h.CreateBankAccount),
+	mux.Handle("POST /search-accounts", h.AuthMiddleware(
+		http.HandlerFunc(h.SearchAccounts),
 	))
-	mux.Handle("GET /accounts{acc_no}", h.AuthMiddleware(
-		http.HandlerFunc(h.DeleteBankAccount),
+	mux.Handle("POST /deactivate-account", h.AuthMiddleware(
+		http.HandlerFunc(h.DeactivateCard),
 	))
 
 	loggedMux := LoggingMiddleware(mux)

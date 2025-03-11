@@ -27,6 +27,7 @@ build/
 .vscode/
 tmp/
 go.sum
+docs/tap_gopay.postman_collection.json
 
 # Go build directory
 build/

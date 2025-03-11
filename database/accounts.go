@@ -2,103 +2,31 @@ package database
 
 import (
 	"fmt"
-	"log"
+	"strings"
 
-	"github.com/caleb-mwasikira/banking/validators"
+	v "github.com/caleb-mwasikira/tap_gopay/validators"
 )
 
-type Account struct {
-	Id             int     `json:"-"`
-	UserId         int     `json:"-"`
-	AccountNo      string  `json:"account_no"`
-	AccountType    string  `json:"account_type"`
-	InitialDeposit float64 `json:"initial_deposit"`
-}
-
-type AccountDetails struct {
-	Account
-	FirstName      string  `json:"firstname"`
-	LastName       string  `json:"lastname"`
-	Email          string  `json:"email"`
+type CreditCardDetails struct {
+	v.CreditCardDto
+	Username       string  `json:"username,omitempty"`
+	Email          string  `json:"email,omitempty"`
 	CurrentBalance float64 `json:"current_balance"`
 }
 
-func GetAllAccounts() ([]AccountDetails, error) {
+func CreateCreditCard(newCreditCard v.CreditCardDto) error {
 	query := `
-		SELECT a.id, a.account_no, a.account_type, a.initial_deposit,
-		u.firstname, u.lastname, u.email
-		FROM accounts a
-		INNER JOIN account_balances ab ON a.user_id = ab.user_id
-		INNER JOIN users u ON a.user_id = u.id
-	`
-
-	rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-
-	accounts := []AccountDetails{}
-	acc_details := AccountDetails{}
-
-	for rows.Next() {
-		err := rows.Scan(
-			&acc_details.Id,
-			&acc_details.AccountNo,
-			&acc_details.AccountType,
-			&acc_details.InitialDeposit,
-			&acc_details.FirstName,
-			&acc_details.LastName,
-			&acc_details.Email,
-		)
-		if err != nil {
-			log.Printf("error scanning row; %v\n", err)
-			continue
-		}
-
-		accounts = append(accounts, acc_details)
-	}
-
-	return accounts, nil
-}
-
-func GetAccountByAccNo(acc_no string) (*AccountDetails, error) {
-	query := `
-		SELECT a.id, a.account_no, a.account_type, a.initial_deposit,
-		u.firstname, u.lastname, u.email,
-		ab.current_balance
-		FROM accounts a
-		INNER JOIN account_balances ab ON a.user_id = ab.user_id
-		INNER JOIN users u ON a.user_id = u.id
-		WHERE a.account_no = ?
-	`
-
-	acc_details := AccountDetails{}
-
-	row := db.QueryRow(query, acc_no)
-	err := row.Scan(
-		&acc_details.Id,
-		&acc_details.AccountNo,
-		&acc_details.AccountType,
-		&acc_details.InitialDeposit,
-		&acc_details.FirstName,
-		&acc_details.LastName,
-		&acc_details.Email,
-		&acc_details.CurrentBalance,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &acc_details, nil
-}
-
-func CreateAccount(acc validators.CreateAccountForm) error {
-	query := `
-		INSERT INTO accounts (account_no,user_id,account_type,initial_deposit)
+		INSERT INTO credit_cards(user_id, card_no, cvv, initial_deposit)
 		VALUES(?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, acc.AccountNo, acc.UserId, acc.AccountType, acc.InitialDeposit)
+	_, err := db.Exec(
+		query,
+		newCreditCard.UserId,
+		newCreditCard.CardNo,
+		newCreditCard.Cvv,
+		newCreditCard.InitialDeposit,
+	)
 	if err != nil {
 		return err
 	}
@@ -106,82 +34,127 @@ func CreateAccount(acc validators.CreateAccountForm) error {
 	return nil
 }
 
-func GetAccount(id int, accountNo string, isActive bool) (*AccountDetails, error) {
-	query := `
-		SELECT a.id, a.account_no, a.account_type, a.initial_deposit,
-		u.firstname, u.lastname, u.email,
-		ab.current_balance
-		FROM accounts a
-		INNER JOIN account_balances ab ON a.user_id = ab.user_id
-		INNER JOIN users u ON a.user_id = u.id
-		WHERE u.id = ? AND a.account_no = ? AND a.is_active = ?
-	`
-	acc_details := AccountDetails{}
+func GetCreditCardsAssocWith(phoneNos []string) ([]v.CreditCardDto, error) {
+	if len(phoneNos) == 0 {
+		return nil, fmt.Errorf("empty search parameter phone numbers")
+	}
 
-	row := db.QueryRow(query, id, accountNo, isActive)
+	// generate placeholders (?, ?, ?)
+	placeholders := ""
+	args := make([]interface{}, len(phoneNos))
+
+	for i, phoneNo := range phoneNos {
+		placeholders += "?,"
+		args[i] = phoneNo
+	}
+	placeholders = strings.TrimSuffix(placeholders, ",")
+
+	query := fmt.Sprintf(
+		`
+			SELECT cc.id, cc.user_id, cc.card_no
+			FROM credit_cards cc
+			INNER JOIN users u ON cc.user_id = u.id
+			WHERE u.phone_no IN (%s) AND cc.is_active = TRUE
+		`, placeholders,
+	)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	creditCards := []v.CreditCardDto{}
+	creditCard := v.CreditCardDto{}
+
+	for rows.Next() {
+		err = rows.Scan(
+			&creditCard.Id,
+			&creditCard.UserId,
+			&creditCard.CardNo,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		creditCards = append(creditCards, creditCard)
+	}
+
+	return creditCards, nil
+}
+
+func GetCreditCardsFor(username string) ([]CreditCardDetails, error) {
+	query := `
+		SELECT cc.id, cc.card_no, cc.is_active, cc.created_at,
+		u.username, u.email,
+		b.balance
+		FROM credit_cards cc
+		INNER JOIN users u ON u.id = cc.user_id
+		INNER JOIN balances b ON b.card_no = cc.card_no
+		WHERE username = ?
+	`
+
+	rows, err := db.Query(query, username)
+	if err != nil {
+		return nil, err
+	}
+
+	creditCards := []CreditCardDetails{}
+	creditCard := CreditCardDetails{}
+
+	for rows.Next() {
+		err = rows.Scan(
+			&creditCard.Id,
+			&creditCard.CardNo,
+			&creditCard.IsActive,
+			&creditCard.CreatedAt,
+			&creditCard.Username,
+			&creditCard.Email,
+			&creditCard.CurrentBalance,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		creditCards = append(creditCards, creditCard)
+	}
+
+	return creditCards, nil
+}
+
+func GetCreditCardWhere(username, cardNo string, isActive bool) (*v.CreditCardDto, error) {
+	if strings.TrimSpace(username) == "" || strings.TrimSpace(cardNo) == "" {
+		return nil, fmt.Errorf("empty search parameter username or card_no")
+	}
+
+	query := `
+		SELECT cc.id, cc.user_id, cc.card_no
+		FROM credit_cards cc
+		INNER JOIN users u ON cc.user_id = u.id
+		WHERE u.username = ? 
+		AND cc.card_no = ?
+	`
+
+	if isActive {
+		query += "AND cc.is_active = TRUE"
+	}
+
+	row := db.QueryRow(query, username, cardNo)
+	creditCard := v.CreditCardDto{}
+
 	err := row.Scan(
-		&acc_details.Id,
-		&acc_details.AccountNo,
-		&acc_details.AccountType,
-		&acc_details.InitialDeposit,
-		&acc_details.FirstName,
-		&acc_details.LastName,
-		&acc_details.Email,
-		&acc_details.CurrentBalance,
+		&creditCard.Id,
+		&creditCard.UserId,
+		&creditCard.CardNo,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return &acc_details, nil
+	return &creditCard, nil
 }
 
-func GetAccountByUserId(id int) (*AccountDetails, error) {
-	query := `
-		SELECT a.id, a.account_no, a.account_type, a.initial_deposit,
-		u.firstname, u.lastname, u.email,
-		ab.current_balance
-		FROM accounts a
-		INNER JOIN account_balances ab ON a.user_id = ab.user_id
-		INNER JOIN users u ON a.user_id = u.id
-		WHERE u.id = ?
-	`
-	acc_details := AccountDetails{}
-
-	row := db.QueryRow(query, id)
-	err := row.Scan(
-		&acc_details.Id,
-		&acc_details.AccountNo,
-		&acc_details.AccountType,
-		&acc_details.InitialDeposit,
-		&acc_details.FirstName,
-		&acc_details.LastName,
-		&acc_details.Email,
-		&acc_details.CurrentBalance,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &acc_details, nil
-}
-
-func DeleteAccount(accountNo string) error {
-	query := "UPDATE accounts SET is_active=false WHERE account_no=?"
-
-	result, err := db.Exec(query, accountNo)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return nil
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("account with account_no=%v NOT found", acccountNo)
-	}
-
-	return nil
+func DeactivateCard(cardNo string) error {
+	query := "UPDATE credit_cards SET is_active = FALSE WHERE card_no = ?"
+	_, err := db.Exec(query, cardNo)
+	return err
 }

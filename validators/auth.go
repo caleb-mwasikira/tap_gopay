@@ -11,19 +11,6 @@ const (
 	MIN_PASSWORD_LEN int = 8
 )
 
-type LoginForm struct {
-	Email    string `json:"email" validate:"email"`
-	Password string `json:"password" validate:"password"`
-}
-
-type RegisterForm struct {
-	FirstName   string `json:"firstname" validate:"required,min=3,max=255"`
-	LastName    string `json:"lastname" validate:"required,min=3,max=255"`
-	Email       string `json:"email" validate:"email"`
-	Password    string `json:"password" validate:"password"`
-	PhoneNumber string `json:"phone_no,omitempty"`
-}
-
 func validateEmail(email string) error {
 	if strings.Trim(email, " ") == "" {
 		return fmt.Errorf("email field is required")

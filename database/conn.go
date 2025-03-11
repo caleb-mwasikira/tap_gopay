@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/caleb-mwasikira/banking/utils"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -28,9 +28,10 @@ func init() {
 
 func connectToDatabase() (*sql.DB, error) {
 	cfg := mysql.Config{
-		User:   os.Getenv("DB_USER"),
-		Passwd: os.Getenv("DB_PASS"),
-		DBName: os.Getenv("DB_NAME"),
+		User:      os.Getenv("DB_USER"),
+		Passwd:    os.Getenv("DB_PASS"),
+		DBName:    os.Getenv("DB_NAME"),
+		ParseTime: true,
 	}
 
 	db, err := sql.Open("mysql", cfg.FormatDSN())
