@@ -154,6 +154,16 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// set JWT as cookie in response
+	http.SetCookie(w, &http.Cookie{
+		Name:     "login",
+		Value:    signedToken,
+		Path:     "/",
+		HttpOnly: true,  // prevents JS access
+		Secure:   false, // send only over HTTPs; TODO: set to true in production
+		MaxAge:   int(24 * time.Nanosecond),
+	})
+
 	api.SendResponse(
 		w,
 		"Login successful",
@@ -262,32 +272,54 @@ func VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+func extractJwtFromHeaders(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+
+	if authHeader == "" {
+		return "", fmt.Errorf("missing Authorization header")
+	}
+
+	fields := strings.Split(authHeader, " ")
+	if len(fields) != 2 || fields[0] != "Bearer" {
+		return "", fmt.Errorf("invalid Authorization headers. Must in the format Bearer API_KEY")
+	}
+
+	token := fields[1]
+	return token, nil
+}
+
+func extractJwtFromCookies(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("login")
+	if err != nil {
+		return "", err
+	}
+
+	return cookie.Value, nil
+}
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+		var (
+			token string
+			err   error
+		)
 
-		if authHeader == "" {
-			api.Error(
-				w,
-				"Authorization required",
-				nil,
-				http.StatusUnauthorized,
-			)
-			return
+		token, err = extractJwtFromHeaders(r)
+		if err != nil {
+			errMsg := fmt.Errorf("%v", err)
+
+			token, err = extractJwtFromCookies(r)
+			if err != nil {
+				api.Error(
+					w,
+					"Unauthorized request detected. Please login and try again",
+					fmt.Errorf("error extracting JWT from Authorization header; %v - or session cookies; %v", errMsg, err),
+					http.StatusUnauthorized,
+				)
+				return
+			}
 		}
 
-		fields := strings.Split(authHeader, " ")
-		if len(fields) != 2 || fields[0] != "Bearer" {
-			api.Error(
-				w,
-				"Invalid Authorization headers. Must in the format Bearer API_KEY",
-				nil,
-				http.StatusUnauthorized,
-			)
-			return
-		}
-
-		token := fields[1]
 		claims, err := verifyToken(token)
 		if err != nil {
 			api.Error(

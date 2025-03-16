@@ -169,8 +169,6 @@ func MyAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(dbCreditCards)
-
 	api.SendResponse(
 		w,
 		"Success fetching your accounts",
