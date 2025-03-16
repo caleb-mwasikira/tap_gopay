@@ -18,16 +18,9 @@ import (
 const (
 	CREDIT_CARD_NO_LEN int = 14
 	CVV_LEN            int = 4
-
-	ErrInvalidJsonInput string = "Invalid JSON data provided as input"
 )
 
-func generateCardNo(len int) string {
-	if len <= 0 {
-		log.Println("invalid card number length")
-		return ""
-	}
-
+func generateRandNumbers(len int) string {
 	nums := []string{}
 
 	for i := 0; i < len; i++ {
@@ -56,37 +49,18 @@ func NewAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newCreditCard := v.CreditCardDto{}
-	err := json.NewDecoder(r.Body).Decode(&newCreditCard)
-	if err != nil {
-		api.Error(
-			w,
-			ErrInvalidJsonInput,
-			err,
-			http.StatusBadRequest,
-		)
+	newCreditCard, ok := v.GetValidJsonInput[v.CreditCardDto](w, r.Body)
+	if !ok {
 		return
 	}
 
-	errs := v.ValidateStruct(newCreditCard)
-	if len(errs) != 0 {
-		api.SendResponse(
-			w,
-			"Validation errors",
-			nil,
-			errs,
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	newCardNo := generateCardNo(CREDIT_CARD_NO_LEN)
-	newCvv := generateCardNo(CVV_LEN)
+	newCardNo := generateRandNumbers(CREDIT_CARD_NO_LEN)
+	newCvv := generateRandNumbers(CVV_LEN)
 	if newCardNo == "" || newCvv == "" {
 		api.Error(
 			w,
 			"Unexpected error generating new credit card",
-			err,
+			fmt.Errorf("error generating card number or card cvv value"),
 			http.StatusInternalServerError,
 		)
 		return
@@ -96,7 +70,7 @@ func NewAccount(w http.ResponseWriter, r *http.Request) {
 	newCreditCard.CardNo = newCardNo
 	newCreditCard.Cvv = newCvv
 
-	err = db.CreateCreditCard(newCreditCard)
+	err := db.CreateCreditCard(newCreditCard)
 	if err != nil {
 		api.Error(
 			w,
@@ -119,39 +93,17 @@ func NewAccount(w http.ResponseWriter, r *http.Request) {
 func SearchAccounts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	contacts := []v.ContactDto{}
-	err := json.NewDecoder(r.Body).Decode(&contacts)
-	if err != nil {
-		api.Error(
-			w,
-			ErrInvalidJsonInput,
-			err,
-			http.StatusBadRequest,
-		)
+	contacts, ok := v.GetValidJsonInput[[]v.ContactDto](w, r.Body)
+	if !ok {
 		return
 	}
 
-	phoneNos := make([]string, len(contacts))
-
-	for index, userContact := range contacts {
-		errs := v.ValidateStruct(userContact)
-		if len(errs) != 0 {
-			api.SendResponse(
-				w,
-				fmt.Sprintf("Validation errors at index %v", index),
-				nil,
-				errs,
-				http.StatusBadRequest,
-			)
-			return
-		}
-
-		phoneNos[index] = userContact.PhoneNo
+	phoneNos := []string{}
+	for _, contact := range contacts {
+		phoneNos = append(phoneNos, contact.PhoneNo)
 	}
 
-	var creditCards []v.CreditCardDto = []v.CreditCardDto{}
-
-	creditCards, err = db.GetCreditCardsAssocWith(phoneNos)
+	creditCards, err := db.GetCreditCardsAssocWith(phoneNos)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			api.SendResponse(
@@ -246,7 +198,7 @@ func DeactivateCard(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		api.Error(
 			w,
-			ErrInvalidJsonInput,
+			"Invalid JSON data provided as input",
 			err,
 			http.StatusBadRequest,
 		)

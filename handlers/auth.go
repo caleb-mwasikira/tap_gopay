@@ -20,7 +20,7 @@ import (
 	db "github.com/caleb-mwasikira/tap_gopay/database"
 	"github.com/caleb-mwasikira/tap_gopay/handlers/api"
 	"github.com/caleb-mwasikira/tap_gopay/utils"
-	"github.com/caleb-mwasikira/tap_gopay/validators"
+	v "github.com/caleb-mwasikira/tap_gopay/validators"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -28,6 +28,10 @@ var (
 	secretKey string
 
 	ErrInvalidPasswordFormat error = errors.New("invalid password format stored in database")
+)
+
+const (
+	OTP_DIGIT_LEN int = 4
 )
 
 func init() {
@@ -38,27 +42,8 @@ func init() {
 func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	user := validators.RegisterDto{}
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		api.Error(
-			w,
-			ErrInvalidJsonInput,
-			err,
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	// validate register credentials
-	errs := validators.ValidateStruct(user)
-	if len(errs) != 0 {
-		api.SendResponse(
-			w,
-			"Validation errors",
-			nil, errs,
-			http.StatusBadRequest,
-		)
+	user, ok := v.GetValidJsonInput[v.RegisterDto](w, r.Body)
+	if !ok {
 		return
 	}
 
@@ -99,6 +84,16 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// sending welcome email in goroutine as it is not
+	// crucial to the registration process but merely a side-effect
+	// of it.
+	go func() {
+		err = sendWelcomeEmail(user.Email)
+		if err != nil {
+			log.Printf("error sending welcome email; %v\n", err)
+		}
+	}()
+
 	api.SendResponse(
 		w,
 		"Registration successful",
@@ -110,26 +105,8 @@ func HandleSignUp(w http.ResponseWriter, r *http.Request) {
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	user := validators.LoginDto{}
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		api.Error(
-			w,
-			ErrInvalidJsonInput,
-			err,
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	errs := validators.ValidateStruct(user)
-	if len(errs) != 0 {
-		api.SendResponse(
-			w,
-			"Validation errors",
-			nil, errs,
-			http.StatusBadRequest,
-		)
+	user, ok := v.GetValidJsonInput[v.LoginDto](w, r.Body)
+	if !ok {
 		return
 	}
 
@@ -181,6 +158,106 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		w,
 		"Login successful",
 		signedToken, nil,
+		http.StatusOK,
+	)
+}
+
+func SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	user, ok := v.GetValidJsonInput[v.EmailDto](w, r.Body)
+	if !ok {
+		return
+	}
+
+	otp := generateRandNumbers(OTP_DIGIT_LEN)
+	if otp == "" {
+		api.Error(
+			w,
+			"Unexpected error sending verification email",
+			fmt.Errorf("error generating OTP code"),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	// save generated otp to database
+	err := db.CreateOtpRecord(user.Email, otp)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error sending verification email",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	err = sendOtpEmail(user.Email, "", otp)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error sending verification email",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		"Verification email sent. Please check your email",
+		nil, nil,
+		http.StatusOK,
+	)
+}
+
+func VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	user, ok := v.GetValidJsonInput[v.VerifyEmailDto](w, r.Body)
+	if !ok {
+		return
+	}
+
+	// check if otp code exists in database
+	_, err := db.GetOtpRecord(user.Email, user.Otp)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			api.SendResponse(
+				w,
+				"Invalid email or OTP code",
+				nil, nil,
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		api.Error(
+			w,
+			"Unexpected error verifying email address",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	err = db.ActiveUserAccountWhere(user.Email)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error activating user account",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		"Email verification successful. Your account is now active",
+		nil,
+		nil,
 		http.StatusOK,
 	)
 }

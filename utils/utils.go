@@ -8,17 +8,34 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func LoadEnvVariables() {
+var (
+	ProjectDir    string
+	EmailViewsDir string
+)
+
+func init() {
 	_, fname, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Fatalln("error acquiring program file path")
 	}
 
-	projectDir := filepath.Dir(filepath.Dir(fname))
+	ProjectDir = filepath.Dir(filepath.Dir(fname))
+	EmailViewsDir = filepath.Join(ProjectDir, "views/emails")
+}
 
-	envFile := filepath.Join(projectDir, ".env")
+func LoadEnvVariables() {
+	envFile := filepath.Join(ProjectDir, ".env")
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Fatalf("error loading environment variables; %v\n", err)
 	}
+}
+
+func StringToRuneSlice(s string) []string {
+	runes := []rune(s)
+	chars := make([]string, len(runes))
+	for i, r := range runes {
+		chars[i] = string(r)
+	}
+	return chars
 }

@@ -44,6 +44,8 @@ func main() {
 
 	mux.HandleFunc("POST /signup", h.HandleSignUp)
 	mux.HandleFunc("POST /login", h.HandleLogin)
+	mux.HandleFunc("POST /send-verification-email", h.SendVerificationEmail)
+	mux.HandleFunc("POST /verify-email", h.VerifyEmail)
 
 	mux.Handle("POST /new-account", h.AuthMiddleware(
 		http.HandlerFunc(h.NewAccount),

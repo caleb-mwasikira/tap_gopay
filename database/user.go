@@ -45,3 +45,9 @@ func CreateUser(user v.RegisterDto) error {
 
 	return err
 }
+
+func ActiveUserAccountWhere(email string) error {
+	query := "UPDATE users SET is_active = TRUE WHERE email = ?"
+	_, err := db.Exec(query, email)
+	return err
+}

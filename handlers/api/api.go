@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-type response[T any] struct {
+type Response[T any] struct {
 	Message string            `json:"message"`
 	Data    T                 `json:"data"`
 	Errs    map[string]string `json:"errors,omitempty"`
@@ -15,7 +15,7 @@ type response[T any] struct {
 func SendResponse(w http.ResponseWriter, message string, data any, errs map[string]string, code int) {
 	w.WriteHeader(code)
 
-	resp := response[any]{
+	resp := Response[any]{
 		Message: message,
 		Data:    data,
 		Errs:    errs,
@@ -27,7 +27,7 @@ func SendResponse(w http.ResponseWriter, message string, data any, errs map[stri
 			w,
 			"Error marshalling JSON data",
 			err,
-			http.StatusBadRequest,
+			http.StatusInternalServerError,
 		)
 		return
 	}
@@ -39,7 +39,7 @@ func Error(w http.ResponseWriter, err_msg string, err error, code int) {
 
 	log.Printf("[%v] %v; %v\n", code, err_msg, err)
 
-	resp := response[any]{
+	resp := Response[any]{
 		Message: err_msg,
 		Data:    nil,
 	}

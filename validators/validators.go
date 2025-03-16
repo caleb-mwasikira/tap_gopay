@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func ValidateStruct(obj interface{}) map[string]string {
+func validateStruct(obj interface{}) map[string]string {
 	obj_value := reflect.ValueOf(obj)
 	obj_type := reflect.TypeOf(obj)
 	errs := map[string]string{}

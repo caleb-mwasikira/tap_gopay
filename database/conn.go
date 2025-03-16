@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"time"
 
 	"github.com/caleb-mwasikira/tap_gopay/utils"
 	"github.com/go-sql-driver/mysql"
@@ -32,6 +33,7 @@ func connectToDatabase() (*sql.DB, error) {
 		Passwd:    os.Getenv("DB_PASS"),
 		DBName:    os.Getenv("DB_NAME"),
 		ParseTime: true,
+		Loc:       time.Local,
 	}
 
 	db, err := sql.Open("mysql", cfg.FormatDSN())
