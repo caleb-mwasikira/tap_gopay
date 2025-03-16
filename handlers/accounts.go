@@ -1,17 +1,14 @@
 package handlers
 
 import (
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
-	"math/big"
 	"net/http"
-	"strings"
 
 	db "github.com/caleb-mwasikira/tap_gopay/database"
 	"github.com/caleb-mwasikira/tap_gopay/handlers/api"
+	"github.com/caleb-mwasikira/tap_gopay/utils"
 	v "github.com/caleb-mwasikira/tap_gopay/validators"
 )
 
@@ -19,21 +16,6 @@ const (
 	CREDIT_CARD_NO_LEN int = 14
 	CVV_LEN            int = 4
 )
-
-func generateRandNumbers(len int) string {
-	nums := []string{}
-
-	for i := 0; i < len; i++ {
-		bigNum, err := rand.Int(rand.Reader, big.NewInt(10))
-		if err != nil {
-			log.Printf("error generating random number; %v\n", err)
-			return ""
-		}
-		nums = append(nums, fmt.Sprintf("%v", bigNum.Int64()))
-	}
-
-	return strings.Join(nums, "")
-}
 
 func NewAccount(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
@@ -54,8 +36,8 @@ func NewAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newCardNo := generateRandNumbers(CREDIT_CARD_NO_LEN)
-	newCvv := generateRandNumbers(CVV_LEN)
+	newCardNo := utils.RandNumbers(CREDIT_CARD_NO_LEN)
+	newCvv := utils.RandNumbers(CVV_LEN)
 	if newCardNo == "" || newCvv == "" {
 		api.Error(
 			w,

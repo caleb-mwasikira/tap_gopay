@@ -30,10 +30,6 @@ var (
 	ErrInvalidPasswordFormat error = errors.New("invalid password format stored in database")
 )
 
-const (
-	OTP_DIGIT_LEN int = 4
-)
-
 func init() {
 	utils.LoadEnvVariables()
 	secretKey = os.Getenv("SECRET_KEY")
@@ -180,19 +176,8 @@ func SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	otp := generateRandNumbers(OTP_DIGIT_LEN)
-	if otp == "" {
-		api.Error(
-			w,
-			"Unexpected error sending verification email",
-			fmt.Errorf("error generating OTP code"),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
 	// save generated otp to database
-	err := db.CreateOtpRecord(user.Email, otp)
+	otp, err := db.GenerateAndSaveOtp(user.Email)
 	if err != nil {
 		api.Error(
 			w,
@@ -203,7 +188,7 @@ func SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = sendOtpEmail(user.Email, "", otp)
+	err = sendOtpEmail(user.Email, otp)
 	if err != nil {
 		api.Error(
 			w,
@@ -252,11 +237,16 @@ func VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.ActiveUserAccountWhere(user.Email)
+	err = db.UpdateUser(
+		user.Email,
+		map[string]any{
+			"is_active": true,
+		},
+	)
 	if err != nil {
 		api.Error(
 			w,
-			"Unexpected error activating user account",
+			"Unexpected error verifying email address",
 			err,
 			http.StatusInternalServerError,
 		)
@@ -266,6 +256,91 @@ func VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	api.SendResponse(
 		w,
 		"Email verification successful. Your account is now active",
+		nil,
+		nil,
+		http.StatusOK,
+	)
+}
+
+func RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	user, ok := v.GetValidJsonInput[v.EmailDto](w, r.Body)
+	if !ok {
+		return
+	}
+
+	token, err := db.GenerateAndSavePasswordToken(user.Email)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error sending password reset email",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	err = sendPasswordResetEmail(user.Email, token)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error sending password reset email",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		"Password reset code sent to your email",
+		nil,
+		nil,
+		http.StatusOK,
+	)
+}
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	request, ok := v.GetValidJsonInput[v.ResetPasswordDto](w, r.Body)
+	if !ok {
+		return
+	}
+
+	_, err := db.GetPasswordResetToken(request.Email, request.PasswordResetToken)
+	if err != nil {
+		api.Error(
+			w,
+			"Invalid password-reset-token or email",
+			err,
+			http.StatusUnauthorized,
+		)
+		return
+	}
+
+	hashedPassword := hashPassword(request.NewPassword, nil)
+
+	err = db.UpdateUser(
+		request.Email,
+		map[string]any{
+			"password": hashedPassword,
+		},
+	)
+	if err != nil {
+		api.Error(
+			w,
+			"Unexpected error reseting user password",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		"Success resetting account password",
 		nil,
 		nil,
 		http.StatusOK,
@@ -313,7 +388,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				api.Error(
 					w,
 					"Unauthorized request detected. Please login and try again",
-					fmt.Errorf("error extracting JWT from Authorization header; %v - or session cookies; %v", errMsg, err),
+					fmt.Errorf("%v; %v", errMsg, err),
 					http.StatusUnauthorized,
 				)
 				return

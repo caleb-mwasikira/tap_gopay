@@ -31,6 +31,12 @@ type VerifyEmailDto struct {
 	Otp   string `json:"otp" validate:"required,min=4"`
 }
 
+type ResetPasswordDto struct {
+	PasswordResetToken string `json:"password_reset_token" validate:"min=6"`
+	Email              string `json:"email" validate:"email"`
+	NewPassword        string `json:"new_password" validate:"password"`
+}
+
 type CreditCardDto struct {
 	Id             int       `json:"id"`
 	UserId         int       `json:"user_id"`

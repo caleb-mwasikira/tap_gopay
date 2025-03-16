@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"crypto/rand"
+	"fmt"
 	"log"
+	"math/big"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -29,6 +33,21 @@ func LoadEnvVariables() {
 	if err != nil {
 		log.Fatalf("error loading environment variables; %v\n", err)
 	}
+}
+
+func RandNumbers(len int) string {
+	nums := []string{}
+
+	for i := 0; i < len; i++ {
+		bigNum, err := rand.Int(rand.Reader, big.NewInt(10))
+		if err != nil {
+			log.Printf("error generating random number; %v\n", err)
+			return ""
+		}
+		nums = append(nums, fmt.Sprintf("%v", bigNum.Int64()))
+	}
+
+	return strings.Join(nums, "")
 }
 
 func StringToRuneSlice(s string) []string {

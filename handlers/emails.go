@@ -38,11 +38,16 @@ func sendEmail(email, subject string, body []byte) error {
 	return d.DialAndSend(m)
 }
 
-func sendOtpEmail(email, name, otp string) error {
+func sendOtpEmail(email, otp string) error {
 	tmplFile := filepath.Join(utils.EmailViewsDir, "otp_email.html")
 	t, err := template.ParseFiles(tmplFile)
 	if err != nil {
 		return err
+	}
+
+	user, err := db.GetUser(email)
+	if err != nil {
+		return fmt.Errorf("user does not exist in database")
 	}
 
 	tmplData := struct {
@@ -50,7 +55,7 @@ func sendOtpEmail(email, name, otp string) error {
 		Otp         []string
 		CurrentYear int
 	}{
-		Name:        name,
+		Name:        user.Username,
 		Otp:         utils.StringToRuneSlice(otp),
 		CurrentYear: time.Now().Year(),
 	}
@@ -66,16 +71,16 @@ func sendOtpEmail(email, name, otp string) error {
 }
 
 func sendWelcomeEmail(email string) error {
-	dbUser, err := db.GetUser(email)
+	user, err := db.GetUser(email)
 	if err != nil {
-		return err
+		return fmt.Errorf("user does not exist in database")
 	}
 
 	tmplData := struct {
 		Name        string
 		CurrentYear string
 	}{
-		Name:        dbUser.Username,
+		Name:        user.Username,
 		CurrentYear: fmt.Sprintln(time.Now().Year()),
 	}
 
@@ -92,5 +97,37 @@ func sendWelcomeEmail(email string) error {
 	}
 
 	err = sendEmail(email, "Welcome To TapGoPay", buff.Bytes())
+	return err
+}
+
+func sendPasswordResetEmail(email, token string) error {
+	tmplPath := filepath.Join(utils.EmailViewsDir, "password_reset.html")
+	t, err := template.ParseFiles(tmplPath)
+	if err != nil {
+		return err
+	}
+
+	user, err := db.GetUser(email)
+	if err != nil {
+		return fmt.Errorf("user does not exist in database")
+	}
+
+	tmplData := struct {
+		Name               string
+		PasswordResetToken []string
+		CurrentYear        int
+	}{
+		Name:               user.Username,
+		PasswordResetToken: utils.StringToRuneSlice(token),
+		CurrentYear:        time.Now().Year(),
+	}
+
+	var buff bytes.Buffer
+	err = t.Execute(&buff, tmplData)
+	if err != nil {
+		return err
+	}
+
+	err = sendEmail(email, "TapGoPay Password Reset Email", buff.Bytes())
 	return err
 }

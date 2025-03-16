@@ -1,6 +1,12 @@
 package database
 
-import "time"
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/caleb-mwasikira/tap_gopay/utils"
+)
 
 type OtpRecord struct {
 	Id        int       `json:"id"`
@@ -10,12 +16,21 @@ type OtpRecord struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-func CreateOtpRecord(email, otp string) error {
+const (
+	OTP_DIGIT_LEN int = 4
+)
+
+func GenerateAndSaveOtp(email string) (string, error) {
+	otp := utils.RandNumbers(OTP_DIGIT_LEN)
+	if otp == "" {
+		return "", fmt.Errorf("error generating OTP code")
+	}
+
 	query := "INSERT INTO otps(email, code, expires_at) VALUES(?, ?, ?)"
 	expiresAt := time.Now().Add(1 * time.Hour)
 
 	_, err := db.Exec(query, email, otp, expiresAt)
-	return err
+	return otp, err
 }
 
 func GetOtpRecord(email, otp string) (*OtpRecord, error) {
@@ -40,6 +55,17 @@ func GetOtpRecord(email, otp string) (*OtpRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// one-time-passwords are one time use only
+	go func(id int) {
+		query := "DELETE FROM otps WHERE id = ?"
+
+		_, err := db.Exec(query, id)
+		if err != nil {
+			log.Printf("error deleting used OTP code; %v\n", err)
+		}
+
+	}(otpRecord.Id)
 
 	return &otpRecord, nil
 }

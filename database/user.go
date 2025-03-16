@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 
 	v "github.com/caleb-mwasikira/tap_gopay/validators"
 )
@@ -46,8 +48,18 @@ func CreateUser(user v.RegisterDto) error {
 	return err
 }
 
-func ActiveUserAccountWhere(email string) error {
-	query := "UPDATE users SET is_active = TRUE WHERE email = ?"
-	_, err := db.Exec(query, email)
+func UpdateUser(email string, updateValues map[string]interface{}) error {
+	placeholders := []string{}
+	values := []any{}
+
+	for key, value := range updateValues {
+		placeholders = append(placeholders, fmt.Sprintf("%s = ?", key))
+		values = append(values, value)
+	}
+
+	values = append(values, email)
+
+	query := fmt.Sprintf("UPDATE users SET %s WHERE email = ?", strings.Join(placeholders, ", "))
+	_, err := db.Exec(query, values...)
 	return err
 }
