@@ -64,6 +64,9 @@ func main() {
 	mux.Handle("POST /send-money", h.AuthMiddleware(
 		http.HandlerFunc(h.SendMoney),
 	))
+	mux.Handle("POST /get-transactions", h.AuthMiddleware(
+		http.HandlerFunc(h.GetUserTransactions),
+	))
 
 	loggedMux := LoggingMiddleware(mux)
 

@@ -253,7 +253,7 @@ func SendMoney(w http.ResponseWriter, r *http.Request) {
 				w,
 				"Invalid or deactivated senders credit card",
 				nil, nil,
-				http.StatusBadRequest,
+				http.StatusNoContent,
 			)
 			return
 		}
@@ -282,6 +282,50 @@ func SendMoney(w http.ResponseWriter, r *http.Request) {
 		w,
 		fmt.Sprintf("KSH %.2f sent successfully to %v", request.Amount, request.ReceiversCard),
 		nil, nil,
+		http.StatusOK,
+	)
+}
+
+func GetUserTransactions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	user := getLoggedInUser(r.Context())
+	if user == nil {
+		api.Error(
+			w,
+			"Unauthorized action detected. Please login and try again",
+			nil,
+			http.StatusUnauthorized,
+		)
+		return
+	}
+
+	transactions, err := db.GetTransactionsDetailsWhere(user.Username)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			api.SendResponse(
+				w,
+				"No transactions found",
+				nil, nil,
+				http.StatusNoContent,
+			)
+			return
+		}
+
+		api.Error(
+			w,
+			"Unexpected error fetching user transactions",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		"User transactions found",
+		transactions,
+		nil,
 		http.StatusOK,
 	)
 }

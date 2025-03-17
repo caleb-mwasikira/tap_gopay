@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	v "github.com/caleb-mwasikira/tap_gopay/validators"
 )
@@ -12,6 +13,19 @@ type CreditCardDetails struct {
 	Username       string  `json:"username,omitempty"`
 	Email          string  `json:"email,omitempty"`
 	CurrentBalance float64 `json:"current_balance"`
+}
+
+type TransactionDetails struct {
+	Id            int       `json:"-"`
+	SendersCard   string    `json:"senders_card"`
+	ReceiversCard string    `json:"receivers_card"`
+	Amount        float64   `json:"amount"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+
+	// details acquired by joining credit_cards and users tables
+	SendersUsername   string `json:"senders_username"`
+	ReceiversUsername string `json:"receivers_username"`
 }
 
 func CreateCreditCard(newCreditCard v.CreditCardDto) error {
@@ -169,4 +183,41 @@ func CreateTransaction(transaction v.SendMoneyDto) error {
 		transaction.Amount,
 	)
 	return err
+}
+
+func GetTransactionsDetailsWhere(username string) ([]TransactionDetails, error) {
+	query := `
+		SELECT id, senders_card, receivers_card, amount, status, created_at,
+		senders_username, receivers_username
+		FROM transaction_details
+		WHERE senders_username = ? OR receivers_username = ?
+	`
+
+	rows, err := db.Query(query, username, username)
+	if err != nil {
+		return nil, err
+	}
+
+	transactions := []TransactionDetails{}
+	transaction := TransactionDetails{}
+
+	for rows.Next() {
+		err := rows.Scan(
+			&transaction.Id,
+			&transaction.SendersCard,
+			&transaction.ReceiversCard,
+			&transaction.Amount,
+			&transaction.Status,
+			&transaction.CreatedAt,
+			&transaction.SendersUsername,
+			&transaction.ReceiversUsername,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		transactions = append(transactions, transaction)
+	}
+
+	return transactions, nil
 }
