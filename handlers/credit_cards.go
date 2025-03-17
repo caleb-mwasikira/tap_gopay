@@ -225,3 +225,63 @@ func DeactivateCard(w http.ResponseWriter, r *http.Request) {
 		http.StatusOK,
 	)
 }
+
+func SendMoney(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	user := getLoggedInUser(r.Context())
+	if user == nil {
+		api.Error(
+			w,
+			"Unauthorized action detected. Please login and try again",
+			nil,
+			http.StatusUnauthorized,
+		)
+		return
+	}
+
+	request, ok := v.GetValidJsonInput[v.SendMoneyDto](w, r.Body)
+	if !ok {
+		return
+	}
+
+	// check if senders_card number belongs to the logged in user
+	_, err := db.GetCreditCardWhere(user.Username, request.SendersCard, true)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			api.SendResponse(
+				w,
+				"Invalid or deactivated senders credit card",
+				nil, nil,
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		api.Error(
+			w,
+			"Unexpected error sending money across credit cards",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	err = db.CreateTransaction(request)
+	if err != nil {
+		api.Error(
+			w,
+			fmt.Sprintf("Unexpected error sending money to %v", request.ReceiversCard),
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	api.SendResponse(
+		w,
+		fmt.Sprintf("KSH %.2f sent successfully to %v", request.Amount, request.ReceiversCard),
+		nil, nil,
+		http.StatusOK,
+	)
+}

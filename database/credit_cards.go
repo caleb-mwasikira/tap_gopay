@@ -158,3 +158,15 @@ func DeactivateCard(cardNo string) error {
 	_, err := db.Exec(query, cardNo)
 	return err
 }
+
+func CreateTransaction(transaction v.SendMoneyDto) error {
+	query := "INSERT INTO transactions(senders_card, receivers_card, amount) VALUES(?, ?, ?)"
+
+	_, err := db.Exec(
+		query,
+		transaction.SendersCard,
+		transaction.ReceiversCard,
+		transaction.Amount,
+	)
+	return err
+}

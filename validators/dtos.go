@@ -56,6 +56,12 @@ type CardNoDto struct {
 	CardNo string `json:"card_no" validate:"min=10"`
 }
 
+type SendMoneyDto struct {
+	SendersCard   string  `json:"senders_card" validate:"min=10"`
+	ReceiversCard string  `json:"receivers_card" validate:"min=10"`
+	Amount        float64 `json:"amount" validate:"min=1"`
+}
+
 // Gets valid JSON input from request body.
 // Supports both JSON objects and arrays as input.
 // Validates each object in case of an array.

@@ -61,6 +61,9 @@ func main() {
 	mux.Handle("POST /deactivate-card", h.AuthMiddleware(
 		http.HandlerFunc(h.DeactivateCard),
 	))
+	mux.Handle("POST /send-money", h.AuthMiddleware(
+		http.HandlerFunc(h.SendMoney),
+	))
 
 	loggedMux := LoggingMiddleware(mux)
 
