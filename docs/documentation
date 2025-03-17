@@ -1,0 +1,337 @@
+                                ==========================
+                                       Authentication
+                                ==========================
+
+++++++++++
+POST /api/signup ✅
+++++++++++
+
+Request Body
+username, email, password, phone_number
+
+Validation Rules
+password - length = 8, special_chars
+
+Response
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "username": "",
+        "email": "",
+        "password": "",
+        "phone_number": "",
+    }
+}
+
+StatusOk [200]
+{
+    "message": "",
+}
+
+++++++++++
+POST /api/send-verification-email ✅
+++++++++++
+
+RequestBody
+email
+
+StatesBadRequest [400]
+{
+    "errors": {
+        "email": ""
+    }
+}
+
+StatusOk [200]
+{
+    "message":"",
+}
+
+++++++++++
+POST /api/verify-email ✅
+++++++++++
+
+RequestBody
+email, otp
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "email": "",
+        "otp": "",
+    },
+}
+
+StatusOk [200]
+{
+    "message":""
+}
+
+StatusInternalServerError [500]
+{
+    "message":""
+}
+
+++++++++++
+POST /api/login ✅
+++++++++++
+
+Request Body
+email, password
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "email", "",
+    },
+}
+
+StatusOK [200]
+Response Body
+{
+    "message", ""
+}
+
+++++++++++
+POST /api/request-password-reset ✅
+++++++++++
+
+RequestBody
+email 
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "email", "",
+    },
+}
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+++++++++++
+POST /api/reset-password ✅
+++++++++++
+
+RequestBody
+password_reset_token, new_password 
+
+StatusBadRequest [400]
+{
+    "errors": {},
+}
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+
+++++++++++
+POST /api/change-password
+++++++++++
+
+[login_required]
+
+RequestBody
+old_password, new_password
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "old_password", "",
+        "new_password", "",
+    },
+}
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+++++++++++
+GET /api/my-profile
+++++++++++
+
+[login_required]
+
+StatusOk [200]
+{ 
+    "username":"",
+    "email":"",
+    "phone_number":"",
+    "is_active": "",
+    "created_at": ""
+}
+
+
+++++++++++
+POST /api/update-profile
+++++++++++
+
+[login required]
+
+RequestBody
+email, phone_number
+
+StatusBadRequest [400]
+{
+    "errors": {
+        "email", "",
+        "phone_number", "",
+    },
+}
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+
+++++++++++
+POST /api/deactivate-card ✅
+++++++++++
+
+[login required]
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+++++++++++
+POST /api/logout
+++++++++++
+
+[login required]
+
+StatusOk [200]
+{ 
+    "message":""
+}
+
+                            ==================================
+                                       Money Transfer
+                            ==================================
+
+Note - only admins can create new credit card
+
+++++++++++
+GET /api/search-credit-cards ✅
+++++++++++
+
+RequestBody
+username, phone_number
+
+StatusOk [200]
+{ 
+    "message":"",
+    "data": [
+        { card_id }
+    ],
+}
+
+++++++++++
+GET /api/my-credit-cards ✅
+++++++++++
+
+[login required]
+
+// If user has no accounts return below with data as an empty array
+
+StatusOk [200]
+{ 
+    "message":"",
+    "data": [
+        { card_no, cvv, is_active, created_at, balances.balance },
+    ],
+}
+
+++++++++++
+POST /api/send-money ✅
+++++++++++
+
+Process of sending money on mobile application
+1. Get users contact list; name + phone number
+2. Search backend (POST /search-credit-cards) for accounts linked to above names or phone numbers
+3. Send a POST request to the /api/send-money route with following details
+
+RequestBody
+senders_card, receivers_card, amount
+
+StatusBadRequest[400]
+{
+    "errors": {
+        "senders_card", "",
+        "receivers_card", "",
+        "amount", "",
+    },
+}
+
+// Insert a record to transactions
+// [side-effect] Add notification to notifications table
+// Send response
+
+StatusOk [201]
+{ 
+    "sender": "",
+    "receiver": "",
+    "amount": 0
+}
+
+
+++++++++++
+POST /api/get-transactions ✅
+++++++++++
+
+[login required]
+
+// get transactions for logged in user
+
+StatusOk [200]
+{ 
+    "message":"",
+    "data": [
+        { 
+            id, senders_card, receivers_card, amount, status, created_at, senders_username, receivers_username
+        },
+    ],
+}
+
+++++++++++
+POST /api/deactivate-card ✅
+++++++++++
+
+[login required]
+
+RequestBody
+card_id
+
+// Verify that the card being deactivated belongs to the user
+
+StatusBadRequest[400]
+{
+    "errors": {
+        "card_id": "",
+    },
+}
+
+StatusOk [200]
+{ 
+    "message":"",
+}
+
+
+
+
+
+
+
+
+
+
+
+
