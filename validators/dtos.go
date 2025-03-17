@@ -43,7 +43,7 @@ type CreditCardDto struct {
 	CardNo         string    `json:"card_no"`
 	Cvv            string    `json:"-"`
 	InitialDeposit float64   `json:"initial_deposit,omitempty" validate:"min=100"`
-	IsActive       bool      `json:"is_active"`
+	IsActive       bool      `json:"is_active,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 

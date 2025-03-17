@@ -112,7 +112,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		if err == sql.ErrNoRows {
 			api.SendResponse(
 				w,
-				"User account does not exist",
+				"Invalid username or password",
 				nil, nil,
 				http.StatusUnauthorized,
 			)
@@ -121,7 +121,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 		api.Error(
 			w,
-			"Unexpected error loggin in user",
+			"Unexpected error logging in user",
 			err,
 			http.StatusInternalServerError,
 		)
@@ -311,11 +311,21 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	_, err := db.GetPasswordResetToken(request.Email, request.PasswordResetToken)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			api.SendResponse(
+				w,
+				"Invalid password-reset-token or email",
+				nil, nil,
+				http.StatusUnauthorized,
+			)
+			return
+		}
+
 		api.Error(
 			w,
-			"Invalid password-reset-token or email",
+			"Unexpected error reseting user password",
 			err,
-			http.StatusUnauthorized,
+			http.StatusInternalServerError,
 		)
 		return
 	}

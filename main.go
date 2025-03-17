@@ -49,16 +49,16 @@ func main() {
 	mux.HandleFunc("POST /request-password-reset", h.RequestPasswordReset)
 	mux.HandleFunc("POST /reset-password", h.ResetPassword)
 
-	mux.Handle("POST /new-account", h.AuthMiddleware(
-		http.HandlerFunc(h.NewAccount),
+	mux.Handle("POST /new-credit-card", h.AuthMiddleware(
+		http.HandlerFunc(h.NewCreditCard),
 	))
-	mux.Handle("GET /my-accounts", h.AuthMiddleware(
-		http.HandlerFunc(h.MyAccounts),
+	mux.Handle("GET /my-credit-cards", h.AuthMiddleware(
+		http.HandlerFunc(h.MyCreditCards),
 	))
-	mux.Handle("POST /search-accounts", h.AuthMiddleware(
-		http.HandlerFunc(h.SearchAccounts),
+	mux.Handle("POST /search-credit-cards", h.AuthMiddleware(
+		http.HandlerFunc(h.SearchCreditCard),
 	))
-	mux.Handle("POST /deactivate-account", h.AuthMiddleware(
+	mux.Handle("POST /deactivate-card", h.AuthMiddleware(
 		http.HandlerFunc(h.DeactivateCard),
 	))
 

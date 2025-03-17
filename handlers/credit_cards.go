@@ -17,7 +17,7 @@ const (
 	CVV_LEN            int = 4
 )
 
-func NewAccount(w http.ResponseWriter, r *http.Request) {
+func NewCreditCard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	user := getLoggedInUser(r.Context())
@@ -72,7 +72,7 @@ func NewAccount(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func SearchAccounts(w http.ResponseWriter, r *http.Request) {
+func SearchCreditCard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	contacts, ok := v.GetValidJsonInput[[]v.ContactDto](w, r.Body)
@@ -116,7 +116,7 @@ func SearchAccounts(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func MyAccounts(w http.ResponseWriter, r *http.Request) {
+func MyCreditCards(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	user := getLoggedInUser(r.Context())
